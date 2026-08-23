@@ -1,0 +1,55 @@
+name: Build Android APK
+
+# Runs automatically every time you push to GitHub, and can also be
+# triggered manually from the Actions tab.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # This repo only contains lib/ and pubspec.yaml (the Dart source).
+      # We generate a throwaway project purely to get a fresh, correct
+      # android/ folder from whatever Flutter version is current, then
+      # copy just that folder in. This avoids hand-maintained Gradle
+      # files going stale as Flutter/Android tooling updates.
+      - name: Generate the Android platform folder
+        run: |
+          flutter create --org com.example --project-name fuel_bills_app scaffold_tmp
+          cp -r scaffold_tmp/android .
+          rm -rf scaffold_tmp
+
+      # Add the permissions the notification scheduler needs on
+      # Android 12+/13+, since the freshly generated manifest won't
+      # have them yet.
+      - name: Add notification permissions to the manifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/i\
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\
+              <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>\
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>' "$MANIFEST"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuel-bills-app-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
