@@ -45,6 +45,33 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # A known snag: the flutter_timezone plugin's Kotlin compiler
+      # target (1.8) doesn't match the app's Java target (11), which
+      # newer Gradle/Kotlin versions treat as a hard error. This forces
+      # every module — including plugins — onto a consistent target.
+      - name: Fix Kotlin/Java target mismatch
+        run: |
+          cat >> android/build.gradle << 'EOF'
+
+subprojects {
+    afterEvaluate { proj ->
+        if (proj.plugins.hasPlugin("org.jetbrains.kotlin.android")) {
+            proj.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_11
+                    targetCompatibility JavaVersion.VERSION_11
+                }
+            }
+            proj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                kotlinOptions {
+                    jvmTarget = "11"
+                }
+            }
+        }
+    }
+}
+EOF
+
       - name: Build release APK
         run: flutter build apk --release
 
