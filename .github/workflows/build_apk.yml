@@ -51,26 +51,25 @@ jobs:
       # every module — including plugins — onto a consistent target.
       - name: Fix Kotlin/Java target mismatch
         run: |
-          cat >> android/build.gradle << 'EOF'
-
-subprojects {
-    afterEvaluate { proj ->
-        if (proj.plugins.hasPlugin("org.jetbrains.kotlin.android")) {
-            proj.android {
-                compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_11
-                    targetCompatibility JavaVersion.VERSION_11
-                }
-            }
-            proj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-                kotlinOptions {
-                    jvmTarget = "11"
-                }
-            }
-        }
-    }
-}
-EOF
+          printf '%s\n' \
+            'subprojects {' \
+            '    afterEvaluate { proj ->' \
+            '        if (proj.plugins.hasPlugin("org.jetbrains.kotlin.android")) {' \
+            '            proj.android {' \
+            '                compileOptions {' \
+            '                    sourceCompatibility JavaVersion.VERSION_11' \
+            '                    targetCompatibility JavaVersion.VERSION_11' \
+            '                }' \
+            '            }' \
+            '            proj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {' \
+            '                kotlinOptions {' \
+            '                    jvmTarget = "11"' \
+            '                }' \
+            '            }' \
+            '        }' \
+            '    }' \
+            '}' \
+            >> android/build.gradle
 
       - name: Build release APK
         run: flutter build apk --release
